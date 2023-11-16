@@ -1,7 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Image,
-  ImageBackground,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,13 +10,30 @@ import {
 import { AntDesign } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 
+import { Modal } from "react-native";
+
 function HomePage() {
-  const [img, setImg] = React.useState([]);
-  console.log(img.length);
+  const [isActive, setActive] = useState(false);
+  const [img, setImg] = useState([]);
+  const [selectingImg, setSelectImg] = useState(null);
+  const [deletingImg, setDeleteImg] = useState([]);
+
   const selectImg = async () => {
     let result = await DocumentPicker.getDocumentAsync({});
     if (!result.canceled) {
-      setImg((previmg) => [...previmg, { uri: result.assets[0].uri }]);
+      setImg((previmg) => [
+        ...previmg,
+        { uri: result.assets[0].uri, name: result.assets[0].name },
+      ]);
+    }
+  };
+
+  const deleteImg = () => {
+    if (selectingImg !== null) {
+      setImg((previmg) => previmg.filter((item) => item !== selectingImg));
+      setDeleteImg([...deletingImg, selectingImg]);
+
+      setActive(false);
     }
   };
 
@@ -34,20 +50,93 @@ function HomePage() {
           }}
         >
           <Text>Виберіть фото</Text>
-          <AntDesign name="plus" size={24} />
         </View>
       ) : (
         ""
       )}
       <ScrollView>
+        <Modal
+          animationType="slide"
+          visible={isActive}
+          onRequestClose={() => setActive(false)}
+        >
+          <View>
+            <TouchableOpacity
+              onPress={() => setActive(false)}
+              style={{
+                position: "absolute",
+                right: 0,
+              }}
+            >
+              <AntDesign
+                name="close"
+                size={20}
+                style={{
+                  margin: 20,
+                }}
+              />
+            </TouchableOpacity>
+          </View>
+          <View>
+            {selectingImg != null ? (
+              <View
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "75%",
+                  marginVertical: 100,
+                }}
+              >
+                <Image
+                  source={{ uri: selectingImg.uri }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                  }}
+                />
+                <Text>{selectingImg.name.slice(0, 36)}</Text>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: "red",
+                    width: "50%",
+                    height: 60,
+                    marginTop: 20,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    borderRadius: 50,
+                  }}
+                  onPress={() => deleteImg()}
+                >
+                  <Text style={{ color: "#fff", fontSize: 16 }}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              ""
+            )}
+          </View>
+        </Modal>
         <View style={styles.container}>
           {img.map((item, index) => (
             <View key={index} styles={styles.imgContainer}>
-              <Image
-                source={{ uri: item.uri }}
-                style={styles.image}
-                keyExtractor={(item, index) => index.toString()}
-              />
+              <TouchableOpacity
+                onPress={() => {
+                  setActive(true);
+                  setSelectImg(item, index);
+                }}
+              >
+                <Image
+                  source={{ uri: item.uri }}
+                  style={styles.image}
+                  keyExtractor={(item, index) => index.toString()}
+                />
+              </TouchableOpacity>
+              <Text style={{ textAlign: "center" }}>
+                {item.name.slice(0, 13)}
+              </Text>
             </View>
           ))}
         </View>
@@ -56,8 +145,8 @@ function HomePage() {
         <TouchableOpacity style={styles.btnTouch} onPress={() => selectImg()}>
           <AntDesign
             name="plus"
-            size={20}
-            color={"white"}
+            size={30}
+            color={"#7fafff"}
             style={styles.btnTouchIcon}
           />
         </TouchableOpacity>
@@ -72,8 +161,8 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   btnTouch: {
-    width: 50,
-    height: 50,
+    width: 60,
+    height: 60,
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
@@ -81,14 +170,13 @@ const styles = StyleSheet.create({
     right: 10,
     bottom: 10,
     zIndex: 999,
-  },
-  btnTouchIcon: {
-    backgroundColor: "#24A6D9",
-    borderColor: "grey",
+    backgroundColor: "#fff",
     borderWidth: 1,
+    borderColor: "lightgrey",
     padding: 10,
     borderRadius: 50,
   },
+
   imgContainer: {
     width: "30%",
     marginBottom: 10,
